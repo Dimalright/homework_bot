@@ -2,19 +2,18 @@ import logging
 import os
 import sys
 import time
+import exception
+import telegram
+import requests
+import json
 
 from http import HTTPStatus
 
 from logging.handlers import RotatingFileHandler
 
-import requests
-
-import telegram
-
 from dotenv import load_dotenv
 
-import exception
-
+from endpoint import ENDPOINT
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -36,12 +35,12 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+TELEGRAM_RETRY_TIME = 600
 
-RETRY_TIME = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-HOMEWORK_STATUSES = {
+ENDPOINT
+VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -82,6 +81,9 @@ def get_api_answer(current_timestamp: int) -> dict:
         message = f'Эндпойнт недоступен: {error}'
         logger.error(message)
         raise requests.exceptions.RequestException(message)
+    except json.decoder.JSONDecodeError as error:
+        raise Exception((f'Ответ {response.text} получен не в виде JSON: '
+                         f'{error}'))
     return response.json()
 
 
@@ -122,7 +124,7 @@ def parse_status(homework: dict) -> str:
         raise KeyError(message)
 
     try:
-        verdict = HOMEWORK_STATUSES[homework_status]
+        verdict = VERDICTS[homework_status]
         logger.info('Сообщение подготовлено для отправки')
     except KeyError as error:
         message = f'Неизвестный статус домашней работы: {error}'
@@ -164,7 +166,7 @@ def main() -> None:
 
     while True:
         try:
-            response = get_api_answer(current_timestamp - RETRY_TIME)
+            response = get_api_answer(current_timestamp - TELEGRAM_RETRY_TIME)
             homework = check_response(response)
             if homework and homework != last_homework:
                 message = parse_status(homework[0])
@@ -173,7 +175,7 @@ def main() -> None:
             else:
                 logger.debug('Статус домашней работы не изменился')
             current_timestamp = response.get('current_date')
-            time.sleep(RETRY_TIME)
+            time.sleep(TELEGRAM_RETRY_TIME)
 
         except Exception as error:
             if str(error) != last_error:
@@ -182,7 +184,7 @@ def main() -> None:
                 last_error = str(error)
                 time.sleep(120)
             else:
-                time.sleep(RETRY_TIME)
+                time.sleep(TELEGRAM_RETRY_TIME)
 
 
 if __name__ == '__main__':

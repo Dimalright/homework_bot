@@ -94,6 +94,7 @@ def check_response(response: dict) -> list:
     API приведенный к типам данных Python (dict). Функция возвращает список
     домашних работ по ключу 'homeworks'.
     """
+    logging.info('Начинаем проверку корректности ответа API.')
     if isinstance(response, dict):
         try:
             homework = response['homeworks']
@@ -110,28 +111,34 @@ def check_response(response: dict) -> list:
         raise TypeError('В ответе API не обнаружен словарь')
 
 
-def parse_status(homework: dict) -> str:
-    """
-    Извлекает из информации о домашней работе статус работы.
-    Возвращает строку для отправки сообщения в Телеграмм.
-    """
-    try:
-        homework_name = homework['homework_name']
-        homework_status = homework['status']
-    except KeyError as error:
-        message = f'Ключ {error} не найден в информации о домашней работе'
-        logger.error(message)
-        raise KeyError(message)
-
-    try:
-        verdict = VERDICTS[homework_status]
-        logger.info('Сообщение подготовлено для отправки')
-    except KeyError as error:
-        message = f'Неизвестный статус домашней работы: {error}'
-        logger.error(message)
-        raise exception.UnknownStatus(message)
-
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+def parse_status(homework):
+    """Определяет статус проверки конкретной домашней работы."""
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
+    if homework_name is None:
+        raise KeyError(
+            'Домашняя работа не содержит необходимого ключа homework_name'
+        )
+    if homework_status is None:
+        raise KeyError(
+            'Домашняя работа не содержит необходимого ключа homework_status'
+        )
+    logger.info(
+        'Домашняя работа содержит необходимые ключи: ',
+        f'homework_name={homework_name}, homework_status={homework_status}'
+    )
+    if homework_status not in VERDICTS:
+        raise exception.UnknownStatus(
+            'Статус проверки работы не соответствует ожиданиям: ',
+            f'неизвестный статус{homework_status}'
+        )
+    verdict = VERDICTS[homework_status]
+    logger.info(f'Изменился статус домашней работы: {verdict}')
+    result = (
+        f'Изменился статус проверки работы "{homework_name}".'
+        + f'{verdict}'
+    )
+    return result
 
 
 def check_tokens() -> bool:
@@ -140,7 +147,10 @@ def check_tokens() -> bool:
     Проверка токенов Практикума и
     Bot API, id чата получателя. Возвращает булево значение.
     """
+    checker = True
     checker = all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID))
+    if not checker:
+        logging.critical('Отсутствует переменная токена!!!')
     return checker
 
 
@@ -175,16 +185,14 @@ def main() -> None:
             else:
                 logger.debug('Статус домашней работы не изменился')
             current_timestamp = response.get('current_date')
-            time.sleep(TELEGRAM_RETRY_TIME)
 
         except Exception as error:
             if str(error) != last_error:
                 message = f'Сбой в работе программы: {error}'
                 send_message(bot, message)
                 last_error = str(error)
-                time.sleep(120)
-            else:
-                time.sleep(TELEGRAM_RETRY_TIME)
+        finally:
+            time.sleep(TELEGRAM_RETRY_TIME)
 
 
 if __name__ == '__main__':

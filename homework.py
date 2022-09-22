@@ -112,17 +112,13 @@ def check_response(response: dict) -> list:
 
 
 def parse_status(homework):
-    """Парсинг домашней работы."""
-    if 'homework_name' in homework and 'status' in homework:
-        homework_name = homework.get('homework_name')
-        homework_status = homework.get('status')
-        if homework_status in VERDICTS:
-            verdict = VERDICTS.get(homework_status)
-            return (f'Изменился статус проверки работы "{homework_name}". '
-                    f' {verdict}')
-    else:
-        raise KeyError("Отсутствует ключи homework_name или status в ответе "
-                       "API")
+    """Полученный ответ разделяем на имя и статус."""
+    """И передаем его в сообщение."""
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
+    if homework_status in VERDICTS.keys():
+        verdict = VERDICTS.get(homework_status)
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens() -> bool:

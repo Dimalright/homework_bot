@@ -112,33 +112,17 @@ def check_response(response: dict) -> list:
 
 
 def parse_status(homework):
-    """Определяет статус проверки конкретной домашней работы."""
-    homework_name = homework.get('homework_name')
-    homework_status = homework.get('status')
-    if homework_name is None:
-        raise KeyError(
-            'Домашняя работа не содержит необходимого ключа homework_name'
-        )
-    if homework_status is None:
-        raise KeyError(
-            'Домашняя работа не содержит необходимого ключа homework_status'
-        )
-    logger.info(
-        'Домашняя работа содержит необходимые ключи: ',
-        f'homework_name={homework_name}, homework_status={homework_status}'
-    )
-    if homework_status not in VERDICTS:
-        raise exception.UnknownStatus(
-            'Статус проверки работы не соответствует ожиданиям: ',
-            f'неизвестный статус{homework_status}'
-        )
-    verdict = VERDICTS[homework_status]
-    logger.info(f'Изменился статус домашней работы: {verdict}')
-    result = (
-        f'Изменился статус проверки работы "{homework_name}".'
-        + f'{verdict}'
-    )
-    return result
+    """Парсинг домашней работы."""
+    if 'homework_name' in homework and 'status' in homework:
+        homework_name = homework.get('homework_name')
+        homework_status = homework.get('status')
+        if homework_status in VERDICTS:
+            verdict = VERDICTS.get(homework_status)
+            return (f'Изменился статус проверки работы "{homework_name}". '
+                    f' {verdict}')
+    else:
+        raise KeyError("Отсутствует ключи homework_name или status в ответе "
+                       "API")
 
 
 def check_tokens() -> bool:

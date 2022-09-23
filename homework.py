@@ -1,18 +1,16 @@
+import json
 import logging
 import os
 import sys
 import time
-import exception
-import telegram
-import requests
-import json
-
 from http import HTTPStatus
-
 from logging.handlers import RotatingFileHandler
 
+import requests
+import telegram
 from dotenv import load_dotenv
 
+import exception
 from endpoint import ENDPOINT
 
 logger = logging.getLogger(__name__)

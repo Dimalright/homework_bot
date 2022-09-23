@@ -114,10 +114,13 @@ def check_response(response: dict) -> list:
 def parse_status(homework):
     """Полученный ответ разделяем на имя и статус."""
     """И передаем его в сообщение."""
-    homework_name = homework['homework_name']
-    homework_status = homework['status']
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
     if homework_status in VERDICTS.keys():
         verdict = VERDICTS.get(homework_status)
+    if homework_name is None or homework_status is None:
+        raise KeyError('отсутствие ожидаемых ключей homework_name '
+                       'и status в ответе API')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -127,7 +130,6 @@ def check_tokens() -> bool:
     Проверка токенов Практикума и
     Bot API, id чата получателя. Возвращает булево значение.
     """
-    checker = True
     checker = all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID))
     if not checker:
         logging.critical('Отсутствует переменная токена!!!')

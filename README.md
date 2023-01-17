@@ -24,7 +24,7 @@ python homework.py
 
 ## Knowledge
 
-- Basic Python==3.9
+- Basic Python==3.7
 - Basic skills with API and JSON
 - Lib: python-telegram-bot~=13.7
 - Lib: python-dotenv
